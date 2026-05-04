@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#08050f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>For You 🌙</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --bg: #08050f;
+  --rose: #e8547a;
+  --blush: #f4a0b5;
+  --cream: #fdf0e8;
+  --gold: #c9a84c;
+  --muted: #7a6b7d;
+  --text: #f5eef8;
+  --card-bg: rgba(255,255,255,0.04);
+}
+
+html, body {
+  height: 100%; width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'Crimson Pro', Georgia, serif;
+  color: var(--text);
+}
+
+/* ══════════════════════════
+   CANVAS STARFIELD
+══════════════════════════ */
+#starCanvas {
+  position: fixed;
+  inset: 0; z-index: 0;
+  pointer-events: none;
+}
+
+/* ══════════════════════════
+   FLOATING HEARTS / PETALS
+══════════════════════════ */
+.petal {
+  position: fixed;
+  font-size: 16px;
+  opacity: 0;
+  z-index: 1;
+  animation: petalFloat linear infinite;
+  pointer-events: none;
+  user-select: none;
+}
+@keyframes petalFloat {
+  0%   { opacity:0; transform: translateY(0) rotate(0deg) scale(0.8); }
+  10%  { opacity:0.7; }
+  90%  { opacity:0.4; }
+  100% { opacity:0; transform: translateY(-100vh) rotate(360deg) scale(1.2); }
+}
+
+/* ══════════════════════════
+   SCREENS
+══════════════════════════ */
+.screen {
+  position: fixed;
+  inset: 0; z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px 40px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  text-align: center;
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.96);
+}
+.screen.out {
+  opacity: 0;
+  transform: translateY(-30px) scale(0.95);
+}
+
+/* ══════════════════════════
+   SCREEN 1 — MYSTERY ENVELOPE
+══════════════════════════ */
+#s1 .eyebrow {
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0;
+  animation: riseUp 0.8s ease 0.3s both;
+  margin-bottom: 20px;
+}
+#s1 h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(38px, 11vw, 60px);
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.1;
+  color: var(--cream);
+  opacity: 0;
+  animation: riseUp 0.9s ease 0.5s both;
+  margin-bottom: 10px;
+}
+#s1 .tagline {
+  font-size: 16px;
+  font-style: italic;
+  color: var(--muted);
+  opacity: 0;
+  animation: riseUp 0.8s ease 0.8s both;
+  margin-bottom: 44px;
+  line-height: 1.6;
+}
+
+/* Envelope */
+.envelope-wrap {
+  opacity: 0;
+  animation: riseUp 1s ease 1.1s both;
+  margin-bottom: 44px;
+  cursor: pointer;
+  position: relative;
+}
+.envelope {
+  width: 220px; height: 155px;
+  position: relative;
+  filter: drop-shadow(0 12px 40px rgba(232,84,122,0.35));
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+.envelope:active { transform: scale(0.95); }
+.envelope svg { width: 100%; height: 100%; }
+
+/* Heartbeat pulse ring */
+.pulse-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 80px; height: 80px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(232,84,122,0.5);
+  animation: pulseRing 1.8s ease-out infinite;
+  pointer-events: none;
+}
+.pulse-ring:nth-child(2) { animation-delay: 0.6s; }
+.pulse-ring:nth-child(3) { animation-delay: 1.2s; }
+@keyframes pulseRing {
+  0%   { transform: translate(-50%,-50%) scale(0.8); opacity:0.8; }
+  100% { transform: translate(-50%,-50%) scale(3);   opacity:0; }
+}
+
+.open-hint {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-top: 12px;
+  animation: breathe 2s ease infinite;
+}
+@keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+/* ══════════════════════════
+   SCREEN 2 — LETTER REVEAL (Butterflies)
+══════════════════════════ */
+#s2 { padding: 40px 24px 60px; justify-content: flex-start; overflow-y: auto; }
+
+.letter-paper {
+  background: linear-gradient(160deg, rgba(253,240,232,0.07) 0%, rgba(201,168,76,0.05) 100%);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 4px 4px 20px 20px;
+  padding: 32px 24px 28px;
+  width: 100%;
+  max-width: 380px;
+  position: relative;
+  text-align: left;
+  margin-bottom: 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+/* Paper top line decoration */
+.letter-paper::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold), var(--rose), var(--gold), transparent);
+  border-radius: 4px 4px 0 0;
+}
+
+.letter-date {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: riseUp 0.6s ease 0.1s both;
+}
+.letter-salute {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-style: italic;
+  color: var(--blush);
+  margin-bottom: 18px;
+  opacity: 0;
+  animation: riseUp 0.6s ease 0.3s both;
+}
+.letter-body {
+  font-size: 17px;
+  line-height: 1.85;
+  color: rgba(245,238,248,0.88);
+  min-height: 120px;
+}
+#typeTarget::after {
+  content: '|';
+  animation: blink 0.7s step-end infinite;
+  color: var(--rose);
+  font-weight: 300;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.letter-sign {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-style: italic;
+  color: var(--rose);
+  margin-top: 24px;
+  text-align: right;
+  opacity: 0;
+}
+
+/* Heart rating */
+.heart-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+  opacity: 0;
+}
+.heart-row span {
+  font-size: 28px;
+  animation: heartPop 0.4s cubic-bezier(0.175,0.885,0.32,1.5) both;
+}
+@keyframes heartPop { from{transform:scale(0)} to{transform:scale(1)} }
+
+/* Reveal btn */
+.btn-reveal {
+  width: 100%; max-width: 380px;
+  padding: 18px;
+  min-height: 58px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, var(--rose), #a8305a);
+  color: #fff;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(232,84,122,0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  opacity: 0;
+  animation: riseUp 0.6s ease 0.2s both;
+  letter-spacing: 0.5px;
+}
+.btn-reveal:active { transform: scale(0.96); }
+
+/* ══════════════════════════
+   SCREEN 3 — THE TROLL REVEAL
+══════════════════════════ */
+#s3 { background: radial-gradient(ellipse at center, rgba(232,84,122,0.08) 0%, transparent 70%); }
+
+.troll-emoji {
+  font-size: 80px;
+  display: block;
+  margin-bottom: 12px;
+  animation: trollBounce 0.6s cubic-bezier(0.175,0.885,0.32,1.5) both;
+}
+@keyframes trollBounce { from{transform:scale(0) rotate(-20deg)} to{transform:scale(1) rotate(0)} }
+
+.troll-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(42px, 12vw, 64px);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--rose);
+  margin-bottom: 8px;
+  animation: riseUp 0.5s ease 0.2s both;
+  opacity: 0;
+}
+.troll-sub {
+  font-size: 16px;
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 300px;
+  margin: 0 auto 32px;
+  animation: riseUp 0.5s ease 0.4s both;
+  opacity: 0;
+}
+.troll-sub em { color: var(--blush); font-style: italic; }
+
+/* Fun truth card */
+.truth-card {
+  width: 100%; max-width: 360px;
+  background: var(--card-bg);
+  border: 1px solid rgba(232,84,122,0.2);
+  border-radius: 20px;
+  padding: 22px 20px;
+  margin-bottom: 28px;
+  font-size: 16px;
+  line-height: 1.75;
+  color: rgba(245,238,248,0.8);
+  animation: riseUp 0.5s ease 0.55s both;
+  opacity: 0;
+}
+.truth-card strong { color: var(--blush); }
+
+.btn-again {
+  width: 100%; max-width: 360px;
+  padding: 17px;
+  min-height: 56px;
+  border-radius: 16px;
+  border: 1px solid rgba(232,84,122,0.3);
+  background: rgba(232,84,122,0.1);
+  color: var(--blush);
+  font-family: 'Crimson Pro', serif;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.2s;
+  animation: riseUp 0.5s ease 0.7s both;
+  opacity: 0;
+}
+.btn-again:active { background: rgba(232,84,122,0.2); }
+
+.credit {
+  font-size: 12px;
+  color: rgba(255,255,255,0.15);
+  margin-top: 20px;
+  animation: riseUp 0.5s ease 0.85s both;
+  opacity: 0;
+}
+
+/* ══════════════════════════
+   CONFETTI / BURST
+══════════════════════════ */
+.burst {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999;
+  font-size: 20px;
+  animation: burstOut ease-out forwards;
+}
+@keyframes burstOut {
+  0%   { transform: translate(0,0) scale(0); opacity:1; }
+  100% { opacity:0; }
+}
+
+/* ══════════════════════════
+   SHARED ANIMATIONS
+══════════════════════════ */
+@keyframes riseUp {
+  from { opacity:0; transform:translateY(22px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<!-- ═══════════ SCREEN 1 ═══════════ -->
+<div class="screen" id="s1">
+  <p class="eyebrow">✦ a message for you ✦</p>
+  <h1>Someone wants<br>to tell you<br>something.</h1>
+  <p class="tagline">It arrived late at night.<br>They were nervous to send it.</p>
+
+  <div class="envelope-wrap" onclick="openEnvelope()">
+    <div class="pulse-ring"></div>
+    <div class="pulse-ring"></div>
+    <div class="pulse-ring"></div>
+    <div class="envelope">
+      <svg viewBox="0 0 220 155" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Envelope body -->
+        <rect x="2" y="2" width="216" height="151" rx="8" fill="#1a0f1e" stroke="rgba(201,168,76,0.4)" stroke-width="1.5"/>
+        <!-- Envelope flap closed -->
+        <path d="M2 10 L110 85 L218 10" stroke="rgba(201,168,76,0.35)" stroke-width="1" fill="none"/>
+        <!-- Bottom triangle lines -->
+        <path d="M2 156 L80 90" stroke="rgba(201,168,76,0.2)" stroke-width="1"/>
+        <path d="M218 156 L140 90" stroke="rgba(201,168,76,0.2)" stroke-width="1"/>
+        <!-- Heart seal -->
+        <text x="110" y="108" text-anchor="middle" font-size="28" fill="#e8547a" opacity="0.9">♥</text>
+        <!-- Decorative corner lines -->
+        <path d="M2 2 L30 2 M2 2 L2 24" stroke="rgba(201,168,76,0.5)" stroke-width="1.5"/>
+        <path d="M218 2 L190 2 M218 2 L218 24" stroke="rgba(201,168,76,0.5)" stroke-width="1.5"/>
+        <path d="M2 153 L30 153 M2 153 L2 131" stroke="rgba(201,168,76,0.5)" stroke-width="1.5"/>
+        <path d="M218 153 L190 153 M218 153 L218 131" stroke="rgba(201,168,76,0.5)" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <p class="open-hint">tap to open 🌙</p>
+  </div>
+</div>
+
+<!-- ═══════════ SCREEN 2 ═══════════ -->
+<div class="screen hidden" id="s2">
+  <div class="letter-paper">
+    <div class="letter-date" id="lDate"></div>
+    <div class="letter-salute">Hey you,</div>
+    <div class="letter-body">
+      <span id="typeTarget"></span>
+    </div>
+    <div class="letter-sign" id="lSign">— Someone 🌹</div>
+  </div>
+
+  <div class="heart-row" id="heartRow">
+    <span style="animation-delay:0.1s">🤍</span>
+    <span style="animation-delay:0.3s">🩷</span>
+    <span style="animation-delay:0.5s">❤️</span>
+    <span style="animation-delay:0.7s">🩷</span>
+    <span style="animation-delay:0.9s">🤍</span>
+  </div>
+
+  <button class="btn-reveal" id="revealBtn" onclick="goTroll()" style="display:none">
+    Find out who sent this →
+  </button>
+</div>
+
+<!-- ═══════════ SCREEN 3 ═══════════ -->
+<div class="screen hidden" id="s3">
+  <span class="troll-emoji">😭💀</span>
+  <div class="troll-title">Surprise!</div>
+  <p class="troll-sub">
+    You felt those butterflies, didn't you?<br>
+    Your cheeks went <em>warm</em>.<br>
+    You smiled a little. Don't lie. 😏
+  </p>
+
+  <div class="truth-card">
+    The sender was… <strong>your own big heart</strong> — the part of you that's secretly waiting for exactly this.<br><br>
+    Real ones know they deserve love letters. 💌<br>
+    <strong>You're that girl.</strong> Always have been.
+  </div>
+
+  <button class="btn-again" onclick="restart()">
+    Send this to someone else 😈
+  </button>
+  <p class="credit">crafted with mischief & roses 🌹</p>
+</div>
+
+<script>
+/* ══════════════════════════
+   STARFIELD CANVAS
+══════════════════════════ */
+(function(){
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = [];
+    for(let i=0; i<140; i++){
+      stars.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        r: Math.random()*1.4+0.3,
+        a: Math.random(),
+        speed: 0.003+Math.random()*0.008,
+        phase: Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function draw(t){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s=>{
+      const alpha = 0.2 + 0.6*Math.abs(Math.sin(t*s.speed + s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,220,210,${alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(draw);
+})();
+
+/* ══════════════════════════
+   FLOATING PETALS
+══════════════════════════ */
+const petalEmojis = ['🌸','✨','🌷','💫','🌹','⭐','🫧'];
+function spawnPetal(){
+  const el = document.createElement('div');
+  el.className = 'petal';
+  el.textContent = petalEmojis[Math.floor(Math.random()*petalEmojis.length)];
+  el.style.left = Math.random()*100 + 'vw';
+  el.style.bottom = '-30px';
+  el.style.fontSize = (12+Math.random()*14) + 'px';
+  const dur = 6+Math.random()*8;
+  el.style.animationDuration = dur + 's';
+  el.style.animationDelay = '0s';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), dur*1000+500);
+}
+setInterval(spawnPetal, 900);
+
+/* ══════════════════════════
+   SCREEN TRANSITIONS
+══════════════════════════ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{
+    if(s.id===id){ s.classList.remove('hidden'); }
+    else { s.classList.add('hidden'); }
+  });
+  window.scrollTo(0,0);
+}
+
+/* ══════════════════════════
+   SCREEN 1 → 2: Open Envelope
+══════════════════════════ */
+function openEnvelope(){
+  // particle burst at tap
+  burst(window.innerWidth/2, window.innerHeight*0.55);
+  setTimeout(()=>{ showScreen('s2'); startLetter(); }, 400);
+}
+
+/* ══════════════════════════
+   TYPEWRITER LETTER
+══════════════════════════ */
+const letterText = `I don't usually do things like this.\n\nBut there's something about you — the way you laugh when you think no one's watching, the way you exist like you don't even know how rare you are.\n\nIt's kind of unfair, honestly.\n\nI just wanted you to know… you're not as invisible as you think you are. Someone notices. Someone always notices.\n\nAnd they think you're kind of everything. 🌙`;
+
+function startLetter(){
+  // Set date
+  const d = new Date();
+  document.getElementById('lDate').textContent =
+    d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}).toUpperCase();
+
+  const target = document.getElementById('typeTarget');
+  const sign   = document.getElementById('lSign');
+  const hearts  = document.getElementById('heartRow');
+  const btn    = document.getElementById('revealBtn');
+
+  let i = 0;
+  let displayed = '';
+  const speed = 28; // ms per char
+
+  function type(){
+    if(i < letterText.length){
+      const ch = letterText[i];
+      displayed += ch === '\n' ? '<br>' : ch;
+      target.innerHTML = displayed;
+      i++;
+      setTimeout(type, ch==='\n' ? speed*6 : speed);
+    } else {
+      // Remove cursor blink, reveal rest
+      target.style.setProperty('--cursor-display','none');
+      target.insertAdjacentHTML('afterend','');
+      // Reveal signature
+      setTimeout(()=>{
+        sign.style.opacity = '1';
+        sign.style.transition = 'opacity 1s ease';
+      }, 400);
+      // Reveal hearts
+      setTimeout(()=>{
+        hearts.style.opacity = '1';
+        hearts.style.transition = 'opacity 0.6s ease';
+      }, 900);
+      // Reveal button
+      setTimeout(()=>{
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+      }, 1600);
+    }
+  }
+  setTimeout(type, 500);
+}
+
+/* ══════════════════════════
+   SCREEN 2 → 3: Troll reveal
+══════════════════════════ */
+function goTroll(){
+  // Big burst
+  for(let i=0;i<3;i++){
+    setTimeout(()=>burst(
+      Math.random()*window.innerWidth,
+      Math.random()*window.innerHeight
+    ), i*150);
+  }
+  setTimeout(()=>showScreen('s3'), 500);
+}
+
+/* ══════════════════════════
+   RESTART
+══════════════════════════ */
+function restart(){
+  document.getElementById('typeTarget').innerHTML = '';
+  document.getElementById('lSign').style.opacity = '0';
+  document.getElementById('heartRow').style.opacity = '0';
+  document.getElementById('revealBtn').style.display = 'none';
+  showScreen('s1');
+}
+
+/* ══════════════════════════
+   PARTICLE BURST
+══════════════════════════ */
+function burst(cx, cy){
+  const emojis = ['💖','✨','🌸','💫','🌷','💕','⭐'];
+  for(let i=0;i<12;i++){
+    const el = document.createElement('div');
+    el.className = 'burst';
+    el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    const angle = (i/12)*Math.PI*2;
+    const dist  = 60+Math.random()*80;
+    const tx = Math.cos(angle)*dist;
+    const ty = Math.sin(angle)*dist;
+    el.style.left = cx+'px';
+    el.style.top  = cy+'px';
+    el.style.fontSize = (14+Math.random()*16)+'px';
+    el.style.animationDuration = (0.7+Math.random()*0.5)+'s';
+    el.style.setProperty('--tx', tx+'px');
+    el.style.setProperty('--ty', ty+'px');
+    // Override keyframe with inline style trick
+    el.style.animation = 'none';
+    document.body.appendChild(el);
+    // Force reflow then animate
+    el.offsetHeight;
+    el.style.transition = `transform ${0.7+Math.random()*0.4}s ease-out, opacity ${0.5+Math.random()*0.3}s ease-out`;
+    el.style.transform = `translate(${tx}px, ${ty}px) scale(1.2)`;
+    el.style.opacity = '0';
+    setTimeout(()=>el.remove(), 1200);
+  }
+}
+</script>
+</body>
+</html>
